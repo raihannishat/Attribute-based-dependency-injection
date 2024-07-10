@@ -6,7 +6,7 @@ public class IoCController : ControllerBase
 {
     private readonly IOrderService _orderService;
 
-    public IoCController(ILogger<IoCController> logger, IOrderService orderService)
+    public IoCController(IOrderService orderService)
     {
         _orderService = orderService;
     }
