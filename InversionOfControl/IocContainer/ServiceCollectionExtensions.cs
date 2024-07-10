@@ -1,6 +1,6 @@
 ﻿namespace IocContainer;
 
-public static class ExtensionService
+public static class ServiceCollectionExtensions
 {
     public static void AddIoC(this IServiceCollection services)
     {
@@ -9,10 +9,10 @@ public static class ExtensionService
 
     private static void RegisterServices(IServiceCollection services, Assembly assembly)
     {
-        var typesWithServiceAttribute = assembly.GetTypes()
+        var typesWithInjectableAttribute = assembly.GetTypes()
             .Where(t => t.GetCustomAttribute<InjectableAttribute>() != null);
 
-        foreach (var type in typesWithServiceAttribute)
+        foreach (var type in typesWithInjectableAttribute)
         {
             var attribute = type.GetCustomAttribute<InjectableAttribute>();
             var interfaces = type.GetInterfaces();
