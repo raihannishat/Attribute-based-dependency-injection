@@ -4,6 +4,10 @@ public static class ServiceCollectionExtensions
 {
     public static void AddIoC(this IServiceCollection services)
     {
+        //services.AddScoped<ItemService, ForeignItemService>();
+        //services.AddScoped<ICustomerService, CustomerService>();
+        //services.AddScoped<IProductService, ProductService>();
+        //services.AddScoped<IOrderService, OrderService>();
         RegisterServices(services, Assembly.GetExecutingAssembly());
     }
 
@@ -16,30 +20,48 @@ public static class ServiceCollectionExtensions
         {
             var attribute = type.GetCustomAttribute<InjectableAttribute>();
             var interfaces = type.GetInterfaces();
+            var baseType = type.BaseType;
 
-            if (interfaces.Length == 0)
+            // Register the service itself
+            if (interfaces.Length == 0 && (baseType == null || baseType == typeof(object)))
             {
-                // Self-binding class
-                _ = attribute!.Lifetime switch
-                {
-                    ServiceLifetime.Singleton => services.AddSingleton(type),
-                    ServiceLifetime.Scoped => services.AddScoped(type),
-                    ServiceLifetime.Transient or _ => services.AddTransient(type)
-                };
+                RegisterServiceWithSelf(services, attribute!.Lifetime, type);
             }
-            else
+
+            // Register the base class if it has the InjectableAttribute
+            if (baseType != null && !baseType.FullName!.Equals("System.Object"))
             {
-                // Interface-based class
+                RegisterServiceWithBase(services, attribute!.Lifetime, baseType, type);
+            }
+
+            // Register interfaces
+            if (interfaces.Length > 0)
+            {
                 foreach (var @interface in interfaces)
                 {
-                    _ = attribute!.Lifetime switch
-                    {
-                        ServiceLifetime.Singleton => services.AddSingleton(@interface, type),
-                        ServiceLifetime.Scoped => services.AddScoped(@interface, type),
-                        ServiceLifetime.Transient or _ => services.AddTransient(@interface, type)
-                    };
+                    RegisterServiceWithBase(services, attribute!.Lifetime, @interface, type);
                 }
             }
         }
+    }
+
+    private static void RegisterServiceWithSelf(IServiceCollection services, ServiceLifetime lifetime, Type implementationType)
+    {
+        _ = lifetime switch
+        {
+            ServiceLifetime.Singleton => services.AddSingleton(implementationType),
+            ServiceLifetime.Scoped => services.AddScoped(implementationType),
+            ServiceLifetime.Transient or _ => services.AddTransient(implementationType)
+        };
+    }
+
+    private static void RegisterServiceWithBase(IServiceCollection services, ServiceLifetime lifetime, Type serviceType, Type implementationType)
+    {
+        _ = lifetime switch
+        {
+            ServiceLifetime.Singleton => services.AddSingleton(serviceType, implementationType),
+            ServiceLifetime.Scoped => services.AddScoped(serviceType, implementationType),
+            ServiceLifetime.Transient or _ => services.AddTransient(serviceType, implementationType)
+        };
     }
 }
