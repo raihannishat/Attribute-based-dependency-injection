@@ -1,4 +1,4 @@
-﻿namespace IocContainer.Services;
+﻿namespace IocContainer.Services.Contracts;
 
 public interface ICustomerService
 {

@@ -19,8 +19,10 @@ public static class ServiceCollectionExtensions
         foreach (var type in typesWithInjectableAttribute)
         {
             var attribute = type.GetCustomAttribute<InjectableAttribute>();
-            var interfaces = type.GetInterfaces();
-            var baseType = type.BaseType;
+            var rootBaseInfo = FindTopBaseType(type);
+
+            var interfaces = rootBaseInfo.interfaces;
+            var baseType = rootBaseInfo.topBasedType;
 
             // Register the service itself
             if (interfaces.Length == 0 && (baseType == null || baseType == typeof(object)))
@@ -29,7 +31,7 @@ public static class ServiceCollectionExtensions
             }
 
             // Register the base class if it has the InjectableAttribute
-            if (baseType != null && !baseType.FullName!.Equals("System.Object"))
+            if (baseType != null && !baseType.FullName!.Equals("System.Object") && baseType.IsAbstract)
             {
                 RegisterServiceWithBase(services, attribute!.Lifetime, baseType, type);
             }
@@ -45,7 +47,10 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static void RegisterServiceWithSelf(IServiceCollection services, ServiceLifetime lifetime, Type implementationType)
+    private static void RegisterServiceWithSelf(
+        IServiceCollection services, 
+        ServiceLifetime lifetime, 
+        Type implementationType)
     {
         _ = lifetime switch
         {
@@ -55,13 +60,33 @@ public static class ServiceCollectionExtensions
         };
     }
 
-    private static void RegisterServiceWithBase(IServiceCollection services, ServiceLifetime lifetime, Type serviceType, Type implementationType)
+    private static void RegisterServiceWithBase(
+        IServiceCollection services, 
+        ServiceLifetime lifetime, 
+        Type serviceType, 
+        Type implementationType)
     {
         _ = lifetime switch
         {
-            ServiceLifetime.Singleton => services.AddSingleton(serviceType, implementationType),
-            ServiceLifetime.Scoped => services.AddScoped(serviceType, implementationType),
-            ServiceLifetime.Transient or _ => services.AddTransient(serviceType, implementationType)
+            ServiceLifetime.Singleton => services.AddKeyedSingleton(serviceType, implementationType, implementationType),
+            ServiceLifetime.Scoped => services.AddKeyedScoped(serviceType, implementationType, implementationType),
+            ServiceLifetime.Transient or _ => services.AddKeyedTransient(serviceType, implementationType, implementationType)
         };
+    }
+
+    private static (Type topBasedType, Type[] interfaces) FindTopBaseType(Type type)
+    {
+        if (type == null) throw new ArgumentNullException(nameof(type));
+
+        Type topBaseType = type;
+        var interfaces = type.GetInterfaces();
+
+        while (topBaseType.BaseType != null && topBaseType.BaseType != typeof(object))
+        {
+            topBaseType = topBaseType.BaseType;
+            interfaces = type.GetInterfaces();
+        }
+
+        return (topBaseType, interfaces);
     }
 }

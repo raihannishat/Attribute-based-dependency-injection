@@ -1,4 +1,4 @@
-﻿namespace IocContainer.Services;
+﻿namespace IocContainer.Services.InterfaceExamples;
 
 [Injectable(ServiceLifetime.Scoped)]
 public class CustomerService : ICustomerService

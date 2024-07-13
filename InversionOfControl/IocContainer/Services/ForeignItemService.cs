@@ -1,6 +1,6 @@
 ﻿namespace IocContainer.Services;
 
-[Injectable(ServiceLifetime.Scoped)]
+//[Injectable(ServiceLifetime.Scoped)]
 public class ForeignItemService : ItemService
 {
     public override string AddItem()
